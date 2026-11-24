@@ -11,7 +11,9 @@ import { SKResourceService } from '../skresources/resources.service';
 import { MapService } from '../map/ol/lib/map.service';
 import { SKStreamFacade } from '../skstream/skstream.facade';
 import {
+  cellHeightPx,
   HOST_API_VERSION,
+  WIDGET_CELL_GAP,
   PlacedWidget,
   PlotterExtensionManifest
 } from './types';
@@ -112,6 +114,29 @@ describe('PlotterExtensionService widgets by screen size', () => {
     expect(service.actionButtonLift()).toBe(0);
     service.screenClass.set('tablet');
     expect(service.actionButtonLift()).toBeGreaterThan(0);
+  });
+
+  it('keeps the toolbar and action button clear of widgets one column in', () => {
+    service.screenClass.set('tablet');
+    service.activeWidgets.set([
+      { ...phoneWidget, col: 2 },
+      { ...tabletWidget, col: 2 }
+    ]);
+    expect(service.toolbarTopOffset()).toBe(0);
+    expect(service.actionButtonLift()).toBe(0);
+  });
+
+  it('reserves both rows for a tall widget spanning the toolbar column', () => {
+    service.manifests.set({
+      [liveExt]: {
+        ...manifest,
+        widgets: [{ ...manifest.widgets![0], size: '2x2' }]
+      }
+    });
+    service.activeWidgets.set([{ ...phoneWidget, col: 2 }]);
+    expect(service.toolbarTopOffset()).toBe(
+      2 * cellHeightPx() + WIDGET_CELL_GAP + 4
+    );
   });
 
   it('saves a new minimum screen and drops the key for every screen', () => {

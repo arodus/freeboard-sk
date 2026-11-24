@@ -228,13 +228,7 @@ export class PlotterExtensionService {
    * bottom-right corner (Freeboard's action button): 0 when no widgets
    * occupy the bottom-right anchor, otherwise just above the occupied rows.
    */
-  readonly actionButtonLift = computed(() => {
-    this.viewportTick();
-    const br = this.shownWidgets().filter((p) => p.anchor === 'br');
-    if (!br.length) return 0;
-    const rows = br.some((p) => p.row === 0) ? 2 : 1;
-    return rows * cellHeightPx() + (rows - 1) * WIDGET_CELL_GAP + 6;
-  });
+  readonly actionButtonLift = computed(() => this.rightEdgeOffset('br', 6));
 
   /**
    * Top offset (px) for the right-hand toolbar (the Show/Hide Toolbars button
@@ -244,13 +238,24 @@ export class PlotterExtensionService {
    * top). The top-right anchor has top gravity, so the non-gravity row is
    * row 1. Mirrors actionButtonLift.
    */
-  readonly toolbarTopOffset = computed(() => {
+  readonly toolbarTopOffset = computed(() => this.rightEdgeOffset('tr', 4));
+
+  private rightEdgeOffset(anchor: 'tr' | 'br', gap: number): number {
     this.viewportTick();
-    const tr = this.shownWidgets().filter((p) => p.anchor === 'tr');
-    if (!tr.length) return 0;
-    const rows = tr.some((p) => p.row === 1) ? 2 : 1;
-    return rows * cellHeightPx() + (rows - 1) * WIDGET_CELL_GAP + 4;
-  });
+    const grid = ANCHOR_GRID[anchor];
+    let depth = 0;
+    for (const placed of this.shownWidgets()) {
+      if (placed.anchor !== anchor) continue;
+      const def = this.widgetDef(placed.extension, placed.widget);
+      const { cols, rows } = parseSize(def?.size ?? '1x1');
+      if (placed.col + cols < grid.cols) continue;
+      const occupiedRows =
+        anchor === 'tr' ? placed.row + rows : grid.rows - placed.row;
+      depth = Math.max(depth, occupiedRows);
+    }
+    if (!depth) return 0;
+    return depth * cellHeightPx() + (depth - 1) * WIDGET_CELL_GAP + gap;
+  }
 
   /**
    * `buttons.setVisibility` choices, by extension then button id. Not
